@@ -1,16 +1,17 @@
-export default async function handler(req, res) {
+const { Octokit } = require("@octokit/rest");
+const { v4: uuidv4 } = require("uuid");
+
+module.exports = async (req, res) => {
   try {
-    if (req.method !== 'POST') return res.status(405).end();
+    if (req.method !== "POST") return res.status(405).end();
 
     const runAt = req.body.runAt;
-    if (!runAt) return res.status(400).send('Missing runAt');
+    if (!runAt) return res.status(400).send("Missing runAt");
 
-    const { Octokit } = await import("@octokit/rest");
-    const { v4: uuidv4 } = await import("uuid");
     const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-    const owner = 'hmm183'; // ✅ update this
-    const repo = 'twilio-vercel-scheduler'; // ✅ confirm this
+    const owner = 'hmm183';
+    const repo = 'twilio-vercel-scheduler';
     const path = 'api/jobs.json';
 
     const { data: file } = await octokit.repos.getContent({ owner, repo, path });
@@ -27,9 +28,9 @@ export default async function handler(req, res) {
       sha: file.sha,
     });
 
-    return res.status(200).send('ok');
+    return res.status(200).send("ok");
   } catch (e) {
-    console.error('[schedule.js] error:', e);
-    res.status(500).send('Internal Server Error');
+    console.error("[/api/schedule] ERROR:", e);
+    return res.status(500).send("Internal Server Error");
   }
-}
+};
