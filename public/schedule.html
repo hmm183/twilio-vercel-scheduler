@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Schedule a Call</title>
+</head>
+<body>
+  <h1>Schedule Your Twilio Call</h1>
+  <input id="phone" type="tel" placeholder="+91##########" />
+  <input id="dt"    type="datetime-local" />
+  <button id="go">Schedule</button>
+  <p id="msg"></p>
+
+  <script>
+    document.getElementById('go').onclick = async () => {
+      const phone = document.getElementById('phone').value;
+      const runAt = document.getElementById('dt').value;
+      const msg   = document.getElementById('msg');
+      if (!phone || !runAt) return msg.textContent = 'Enter both fields';
+
+      const res = await fetch('/api/schedule', {
+        method: 'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ phone, runAt })
+      });
+
+      msg.textContent = res.ok ? '✅ Scheduled!' : '❌ Error';
+    };
+  </script>
+</body>
+</html>

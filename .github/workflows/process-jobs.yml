@@ -1,0 +1,66 @@
+name: Process Scheduled Twilio Calls
+
+# runs every 5 minutes UTC
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Process jobs.json and fire calls
+        env:
+          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          SCHEDULE_SECRET: ${{ secrets.SCHEDULE_SECRET }}
+        run: |
+          node - << 'EOF'
+          const fs = require('fs');
+          const fetch = require('node-fetch');
+          const jobsPath = 'api/jobs.json';
+          const { jobs } = JSON.parse(fs.readFileSync(jobsPath, 'utf8'));
+          const now = new Date();
+          let changed = false;
+
+          for (const job of jobs) {
+            if (!job.called && new Date(job.runAt) <= now) {
+              console.log('Triggering call for', job.phone);
+              const res = await fetch(
+                `https://${process.env.VERCEL_APP_URL}/api/cron-call`,
+                {
+                  method: 'POST',
+                  headers: { 'x-schedule-secret': process.env.SCHEDULE_SECRET }
+                }
+              );
+              if (res.ok) {
+                job.called = true;
+                changed = true;
+              } else {
+                console.error('Failed to call for', job.phone, res.status);
+              }
+            }
+          }
+
+          if (changed) {
+            fs.writeFileSync(jobsPath, JSON.stringify({ jobs }, null, 2));
+            console.log('Updated jobs.json');
+          }
+          EOF
+
+      - name: Commit updated jobs.json
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: 'chore: mark processed calls'
+          file_pattern: 'api/jobs.json'
+          branch: main
