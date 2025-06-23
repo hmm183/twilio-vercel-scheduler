@@ -23,14 +23,17 @@
         return msg.textContent = 'Please pick a future date & time.';
       }
 
+      // ⏰ Convert local time to UTC ISO string
+      const utcTime = new Date(dt).toISOString();
+
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runAt: dt })
+        body: JSON.stringify({ runAt: utcTime })  // ✅ use UTC
       });
 
       if (res.ok) {
-        msg.textContent = '✅ Call scheduled!'
+        msg.textContent = '✅ Call scheduled!';
       } else {
         msg.textContent = `❌ Error ${res.status}: ${await res.text()}`;
       }
