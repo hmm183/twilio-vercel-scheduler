@@ -1,7 +1,7 @@
-const { Octokit } = require("@octokit/rest");
-const { v4: uuidv4 } = require("uuid");
+import { Octokit } from "@octokit/rest";
+import { v4 as uuidv4 } from "uuid";
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).end();
 
@@ -33,4 +33,4 @@ module.exports = async (req, res) => {
     console.error("[/api/schedule] ERROR:", e);
     return res.status(500).send("Internal Server Error");
   }
-};
+}
