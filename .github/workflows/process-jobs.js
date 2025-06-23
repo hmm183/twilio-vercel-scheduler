@@ -1,8 +1,13 @@
 const fs = require('fs');
 const fetch = require('node-fetch');
 
-// Load jobs
 const jobsPath = 'api/jobs.json';
+
+if (!process.env.VERCEL_APP_URL || !process.env.SCHEDULE_SECRET) {
+  console.error("[ERROR] Missing environment variables.");
+  process.exit(1);
+}
+
 const jobsFile = fs.readFileSync(jobsPath, 'utf8');
 const jobData = JSON.parse(jobsFile);
 const now = new Date();
@@ -11,8 +16,11 @@ let updated = false;
 
 (async () => {
   for (let job of jobData.jobs) {
+    const jobTime = new Date(job.runAt);
     console.log(`[CHECK] Job: ${job.runAt}, Called: ${job.called}`);
-    if (!job.called && new Date(job.runAt) <= now) {
+    console.log(`[DEBUG] Now = ${now.toISOString()}, Job Time = ${jobTime.toISOString()}`);
+
+    if (!job.called && jobTime <= now) {
       console.log(`[TRIGGER] Job at ${job.runAt} is due. Sending call...`);
 
       try {
