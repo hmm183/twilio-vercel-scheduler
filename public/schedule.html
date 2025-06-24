@@ -1,41 +1,288 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Schedule a Call</title>
+  <meta charset="UTF-8" />
+  <title>🚀 Call Scheduler</title>
+  <!-- Poppins font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
+    rel="stylesheet"
+  />
   <style>
-    body { font-family: sans-serif; max-width: 400px; margin: 2rem auto; }
-    input, button { width: 100%; padding: 0.5rem; margin-top: 0.5rem; }
-    p { margin-top: 1rem; color: green; }
+    :root {
+      --bg-light: #eef2ff;
+      --bg-dark: #1a202c;
+      --card-light: #fff;
+      --card-dark: #2d3748;
+      --text-light: #1f2937;
+      --text-dark: #e2e8f0;
+      --accent: #4f46e5;
+      --accent-light: #6366f1;
+      --error: #f56565;
+      --muted-light: #718096;
+      --muted-dark: #a0aec0;
+      /* Title gradients */
+      --title-grad-light: linear-gradient(90deg, #f97316, #ec4899); /* orange→pink */
+      --title-grad-dark:  linear-gradient(90deg, #06b6d4, #3b82f6); /* teal→blue */
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow-x: hidden;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+    body.dark {
+      background: linear-gradient(135deg, #2d3748, #1a202c);
+      color: var(--text-dark);
+    }
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 600;
+      background: var(--title-grad-light);
+      /* Clip the background to the text */
+      background-clip: text;
+      -webkit-background-clip: text;
+      /* Make text transparent so the gradient shows through */
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1.5rem;
+      transition: background 0.3s;
+    }
+
+    body.dark h1 {
+      background: var(--title-grad-dark);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+    }
+    .toggle-btn {
+      position: fixed;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      width: 2.5rem; height: 2.5rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+      z-index: 10;
+    }
+    .toggle-btn:hover { transform: scale(1.1); }
+    .card {
+      background: var(--card-light);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 2rem;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    body.dark .card {
+      background: var(--card-dark);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--muted-light);
+    }
+    body.dark label { color: var(--muted-dark); }
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .input-group input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s, background 0.3s, color 0.3s;
+      background: transparent;
+      color: inherit;
+    }
+    .input-group input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    button:hover {
+      background: var(--accent-light);
+      transform: translateY(-2px);
+    }
+    #msg {
+      margin-top: 1rem;
+      text-align: center;
+      font-weight: 500;
+      min-height: 1.5em;
+    }
+    .calls h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .calls-list {
+      list-style: none;
+      padding: 0;
+    }
+    .call-entry {
+      background: var(--card-light);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.2s, background 0.3s;
+    }
+    .call-entry:hover { transform: translateY(-2px); }
+    body.dark .call-entry { background: var(--card-dark); }
+    .call-entry time {
+      font-size: 0.95rem;
+    }
+    .call-entry button {
+      background: var(--error);
+      color: #fff;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .call-entry button:hover { background: #c53030; }
   </style>
 </head>
 <body>
-  <h1>Schedule Your Call</h1>
-  <label>
-    Pick date & time (local):
-    <input id="dt" type="datetime-local"/>
-  </label>
-  <button id="go">Schedule Call</button>
-  <p id="msg"></p>
+
+  <button class="toggle-btn" id="themeToggle" title="Toggle Dark Mode">🌙</button>
+
+  <h1>🚀 Call Scheduler</h1>
+
+  <div class="card">
+    <label for="date">Select Date</label>
+    <div class="input-group">
+      <input id="date" type="date" />
+      <input id="time" type="time" step="300" />
+    </div>
+    <button id="go">📅 Schedule Call</button>
+    <p id="msg"></p>
+  </div>
+
+  <div class="card calls">
+    <h2>📋 Upcoming Calls</h2>
+    <ul id="list" class="calls-list"></ul>
+  </div>
 
   <script>
-    document.getElementById('go').onclick = async () => {
-      const dt = document.getElementById('dt').value;
-      const msg = document.getElementById('msg');
-      if (!dt) return msg.textContent = 'Please select a date & time.';
-
-      // convert to UTC ISO
-      const runAt = new Date(dt).toISOString();
-
-      const res = await fetch('/api/schedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runAt })
-      });
-
-      const text = await res.text();
-      msg.textContent = res.ok ? text : `Error ${res.status}: ${text}`;
+    // Dark mode
+    const toggle = document.getElementById('themeToggle');
+    const root = document.body;
+    let isDark = localStorage.getItem('dark') === 'true';
+    if (isDark) root.classList.add('dark');
+    toggle.textContent = isDark ? '☀️' : '🌙';
+    toggle.onclick = () => {
+      isDark = !isDark;
+      root.classList.toggle('dark', isDark);
+      localStorage.setItem('dark', isDark);
+      toggle.textContent = isDark ? '☀️' : '🌙';
     };
+
+    // Inputs & scheduling logic
+    const dateInput = document.getElementById('date'),
+          timeInput = document.getElementById('time'),
+          msg = document.getElementById('msg'),
+          list = document.getElementById('list');
+
+    (function initDate() {
+      const today = new Date().toISOString().slice(0,10);
+      dateInput.value = today;
+      dateInput.min = today;
+    })();
+
+    (function initTime() {
+      const now = new Date();
+      now.setMinutes(Math.ceil(now.getMinutes()/5)*5);
+      if (now.getMinutes()===60) {
+        now.setHours(now.getHours()+1);
+        now.setMinutes(0);
+      }
+      timeInput.value = now.toTimeString().slice(0,5);
+    })();
+
+    async function fetchCalls() {
+      const res = await fetch('/api/list-calls');
+      const calls = await res.json();
+      list.innerHTML = '';
+      if (calls.length === 0) {
+        list.innerHTML = `<li style="color:var(--muted-light)">No upcoming calls.</li>`;
+        return;
+      }
+      calls.forEach(call => {
+        const li = document.createElement('li');
+        li.className = 'call-entry';
+        const ts = new Date(call.runAt).toLocaleString(undefined,{
+          dateStyle:'medium', timeStyle:'short'
+        });
+        li.innerHTML = `
+          <time>${ts}</time>
+          <button onclick="deleteCall('${call._id}')">🗑️</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function deleteCall(id) {
+      const res = await fetch(`/api/delete-call?id=${id}`,{method:'DELETE'});
+      msg.textContent = res.ok ? '✅ Deleted' : '❌ Failed';
+      fetchCalls();
+    }
+
+    document.getElementById('go').onclick = async () => {
+      msg.textContent = '';
+      const d = dateInput.value, t = timeInput.value;
+      if (!d || !t) {
+        msg.textContent='Please select both date & time.';
+        return;
+      }
+      const runAt = new Date(`${d}T${t}`).toISOString();
+      const res = await fetch('/api/schedule',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ runAt })
+      });
+      const text = await res.text();
+      msg.textContent = res.ok ? `✅ ${text}` : `❌ ${text}`;
+      if (res.ok) fetchCalls();
+    };
+
+    fetchCalls();
   </script>
 </body>
 </html>
