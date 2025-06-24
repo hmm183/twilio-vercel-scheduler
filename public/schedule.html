@@ -3,13 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <title>🚀 Call Scheduler</title>
-  <!-- Poppins font -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
-    rel="stylesheet"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --bg-light: #eef2ff;
@@ -23,15 +19,11 @@
       --error: #f56565;
       --muted-light: #718096;
       --muted-dark: #a0aec0;
-      /* Title gradients */
-      --title-grad-light: linear-gradient(90deg, #f97316, #ec4899); /* orange→pink */
-      --title-grad-dark:  linear-gradient(90deg, #06b6d4, #3b82f6); /* teal→blue */
+      --title-grad-light: linear-gradient(90deg, #f97316, #ec4899);
+      --title-grad-dark:  linear-gradient(90deg, #06b6d4, #3b82f6);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      height: 100%;
-      overflow-x: hidden;
-    }
+    html, body { height: 100%; overflow-x: hidden; }
     body {
       font-family: 'Poppins', sans-serif;
       background: linear-gradient(135deg, #667eea, #764ba2);
@@ -50,16 +42,13 @@
       font-size: 2.25rem;
       font-weight: 600;
       background: var(--title-grad-light);
-      /* Clip the background to the text */
       background-clip: text;
       -webkit-background-clip: text;
-      /* Make text transparent so the gradient shows through */
       color: transparent;
       -webkit-text-fill-color: transparent;
       margin-bottom: 1.5rem;
       transition: background 0.3s;
     }
-
     body.dark h1 {
       background: var(--title-grad-dark);
       background-clip: text;
@@ -112,7 +101,6 @@
       border: 2px solid #e5e7eb;
       border-radius: 8px;
       font-size: 1rem;
-      transition: border-color 0.2s, background 0.3s, color 0.3s;
       background: transparent;
       color: inherit;
     }
@@ -196,12 +184,16 @@
   </div>
 
   <div class="card calls">
-    <h2>📋 Upcoming Calls</h2>
-    <ul id="list" class="calls-list"></ul>
+    <h2>⏳ Upcoming Calls</h2>
+    <ul id="list-upcoming" class="calls-list"></ul>
+  </div>
+
+  <div class="card calls">
+    <h2>✅ Completed Calls</h2>
+    <ul id="list-past" class="calls-list"></ul>
   </div>
 
   <script>
-    // Dark mode
     const toggle = document.getElementById('themeToggle');
     const root = document.body;
     let isDark = localStorage.getItem('dark') === 'true';
@@ -214,11 +206,11 @@
       toggle.textContent = isDark ? '☀️' : '🌙';
     };
 
-    // Inputs & scheduling logic
     const dateInput = document.getElementById('date'),
           timeInput = document.getElementById('time'),
           msg = document.getElementById('msg'),
-          list = document.getElementById('list');
+          listUpcoming = document.getElementById('list-upcoming'),
+          listPast = document.getElementById('list-past');
 
     (function initDate() {
       const today = new Date().toISOString().slice(0,10);
@@ -239,50 +231,99 @@
     async function fetchCalls() {
       const res = await fetch('/api/list-calls');
       const calls = await res.json();
-      list.innerHTML = '';
-      if (calls.length === 0) {
-        list.innerHTML = `<li style="color:var(--muted-light)">No upcoming calls.</li>`;
-        return;
+
+      listUpcoming.innerHTML = '';
+      listPast.innerHTML = '';
+
+      const now = new Date();
+      const upcoming = calls.filter(c => new Date(c.runAt) > now)
+                            .sort((a, b) => new Date(a.runAt) - new Date(b.runAt))
+                            .slice(0, 5);
+
+      const past = calls.filter(c => new Date(c.runAt) <= now)
+                        .sort((a, b) => new Date(b.runAt) - new Date(a.runAt))
+                        .slice(0, 5);
+
+      if (!upcoming.length) {
+        listUpcoming.innerHTML = `<li style="color:var(--muted-light)">No upcoming calls.</li>`;
       }
-      calls.forEach(call => {
+
+      if (!past.length) {
+        listPast.innerHTML = `<li style="color:var(--muted-light)">No calls yet.</li>`;
+      }
+
+      upcoming.forEach(call => {
+        const runAt = new Date(call.runAt);
+        const minsLeft = Math.round((runAt - now) / 60000);
+        const ts = runAt.toLocaleString(undefined, {
+          dateStyle: 'medium', timeStyle: 'short'
+        });
         const li = document.createElement('li');
         li.className = 'call-entry';
-        const ts = new Date(call.runAt).toLocaleString(undefined,{
-          dateStyle:'medium', timeStyle:'short'
-        });
         li.innerHTML = `
-          <time>${ts}</time>
+          <time>${ts} (${minsLeft} min left)</time>
           <button onclick="deleteCall('${call._id}')">🗑️</button>
         `;
-        list.appendChild(li);
+        listUpcoming.appendChild(li);
+      });
+
+      past.forEach(call => {
+        const runAt = new Date(call.runAt);
+        const minsAgo = Math.round((now - runAt) / 60000);
+        const ts = runAt.toLocaleString(undefined, {
+          dateStyle: 'medium', timeStyle: 'short'
+        });
+        const li = document.createElement('li');
+        li.className = 'call-entry';
+        li.innerHTML = `
+          <time>${ts} (${minsAgo} min ago)</time>
+          <button onclick="deleteCall('${call._id}')">🗑️</button>
+        `;
+        listPast.appendChild(li);
       });
     }
 
     async function deleteCall(id) {
-      const res = await fetch(`/api/delete-call?id=${id}`,{method:'DELETE'});
+      const res = await fetch(`/api/delete-call?id=${id}`, { method: 'DELETE' });
       msg.textContent = res.ok ? '✅ Deleted' : '❌ Failed';
       fetchCalls();
     }
 
     document.getElementById('go').onclick = async () => {
-      msg.textContent = '';
+      const btn = document.getElementById('go');
+      btn.disabled = true;
+      btn.textContent = '⏳ Scheduling...';
       const d = dateInput.value, t = timeInput.value;
+      msg.textContent = '';
+
       if (!d || !t) {
-        msg.textContent='Please select both date & time.';
+        msg.textContent = '❌ Please pick both date & time.';
+        btn.disabled = false;
+        btn.textContent = '📅 Schedule Call';
         return;
       }
+
       const runAt = new Date(`${d}T${t}`).toISOString();
-      const res = await fetch('/api/schedule',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ runAt })
-      });
-      const text = await res.text();
-      msg.textContent = res.ok ? `✅ ${text}` : `❌ ${text}`;
-      if (res.ok) fetchCalls();
+
+      try {
+        const res = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ runAt })
+        });
+        const text = await res.text();
+        msg.textContent = res.ok ? `✅ ${text}` : `❌ ${text}`;
+        fetchCalls();
+      } catch {
+        msg.textContent = '❌ Request failed.';
+      }
+
+      btn.disabled = false;
+      btn.textContent = '📅 Schedule Call';
     };
 
     fetchCalls();
+    setInterval(fetchCalls, 30000);
   </script>
 </body>
 </html>
