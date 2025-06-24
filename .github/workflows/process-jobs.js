@@ -1,55 +1,56 @@
-const fs = require('fs');
+// .github/workflows/process-jobs.js
+const { MongoClient } = require('mongodb');
 const fetch = require('node-fetch');
 
-const jobsPath = 'api/jobs.json';
+async function main() {
+  const uri = process.env.MONGO_URI;
+  if (!uri) throw new Error('MONGO_URI not set');
 
-if (!process.env.VERCEL_APP_URL || !process.env.SCHEDULE_SECRET) {
-  console.error("[ERROR] Missing environment variables.");
-  process.exit(1);
-}
+  console.log('[START] Connecting to MongoDB');
+  const client = await MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+  const db = client.db(); // default database from URI
+  const col = db.collection('scheduled_calls');
 
-const jobsFile = fs.readFileSync(jobsPath, 'utf8');
-const jobData = JSON.parse(jobsFile);
-const now = new Date();
+  const now = new Date();
+  console.log(`[CHECK] ${now.toISOString()}: Finding due jobs…`);
+  const dueJobs = await col.find({ called: false, runAt: { $lte: now } }).toArray();
+  console.log(`[FOUND] ${dueJobs.length} job(s) due`);
 
-let updated = false;
+  for (const job of dueJobs) {
+    console.log(`[TRIGGER] Job ${job._id} scheduled at ${job.runAt.toISOString()}`);
+    try {
+      const res = await fetch(`https://${process.env.VERCEL_APP_URL}/api/cron-call`, {
+        method: 'POST',
+        headers: { 'x-schedule-secret': process.env.SCHEDULE_SECRET }
+      });
+      const text = await res.text();
+      console.log(`[RESPONSE] ${res.status}: ${text}`);
 
-(async () => {
-  for (let job of jobData.jobs) {
-    const jobTime = new Date(job.runAt);
-    console.log(`[CHECK] Job: ${job.runAt}, Called: ${job.called}`);
-    console.log(`[DEBUG] Now = ${now.toISOString()}, Job Time = ${jobTime.toISOString()}`);
+      if (res.ok) {
+        // assume JSON { sid: 'CAxxx' }
+        let sid = null;
+        try {
+          sid = JSON.parse(text).sid;
+        } catch {}
 
-    if (!job.called && jobTime <= now) {
-      console.log(`[TRIGGER] Job at ${job.runAt} is due. Sending call...`);
-
-      try {
-        const res = await fetch(`https://${process.env.VERCEL_APP_URL}/api/cron-call`, {
-          method: 'POST',
-          headers: {
-            'x-schedule-secret': process.env.SCHEDULE_SECRET,
-          },
-        });
-
-        const text = await res.text();
-        console.log(`[RESPONSE] Status ${res.status}: ${text}`);
-
-        if (res.ok) {
-          job.called = true;
-          updated = true;
-        } else {
-          console.warn(`[FAILURE] Call failed, not marking job.`);
-        }
-      } catch (e) {
-        console.error(`[ERROR] Fetch to /cron-call failed:`, e);
+        await col.updateOne(
+          { _id: job._id },
+          { $set: { called: true, sid } }
+        );
+        console.log(`[UPDATE] Marked ${job._id} called=true`);
+      } else {
+        console.warn(`[SKIP] Not marking job ${job._id} due to error`);
       }
+    } catch (err) {
+      console.error(`[ERROR] Processing job ${job._id}:`, err);
     }
   }
 
-  if (updated) {
-    fs.writeFileSync(jobsPath, JSON.stringify(jobData, null, 2));
-    console.log(`[UPDATE] jobs.json updated successfully.`);
-  } else {
-    console.log(`[INFO] No jobs updated.`);
-  }
-})();
+  await client.close();
+  console.log('[DONE] Scheduler run complete');
+}
+
+main().catch(err => {
+  console.error('[FATAL] Scheduler crashed:', err);
+  process.exit(1);
+});
