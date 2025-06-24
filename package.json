@@ -12,7 +12,8 @@
   "dependencies": {
     "@octokit/rest": "^22.0.0",
     "express": "^5.1.0",
-    "node-fetch": "^3.3.2",
+    "mongodb": "^6.17.0",
+    "node-fetch": "^2.7.0",
     "twilio": "^5.7.1",
     "uuid": "^11.1.0"
   }

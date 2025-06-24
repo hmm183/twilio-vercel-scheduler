@@ -3,40 +3,38 @@
 <head>
   <meta charset="utf-8">
   <title>Schedule a Call</title>
+  <style>
+    body { font-family: sans-serif; max-width: 400px; margin: 2rem auto; }
+    input, button { width: 100%; padding: 0.5rem; margin-top: 0.5rem; }
+    p { margin-top: 1rem; color: green; }
+  </style>
 </head>
 <body>
-  <h1>Schedule Your Twilio Call</h1>
-
+  <h1>Schedule Your Call</h1>
   <label>
-    Pick date & time (IST):
+    Pick date & time (local):
     <input id="dt" type="datetime-local"/>
   </label>
-  <button id="go">Schedule</button>
+  <button id="go">Schedule Call</button>
   <p id="msg"></p>
 
   <script>
     document.getElementById('go').onclick = async () => {
       const dt = document.getElementById('dt').value;
       const msg = document.getElementById('msg');
+      if (!dt) return msg.textContent = 'Please select a date & time.';
 
-      if (!dt) {
-        return msg.textContent = 'Please pick a future date & time.';
-      }
-
-      // ⏰ Convert local time to UTC ISO string
-      const utcTime = new Date(dt).toISOString();
+      // convert to UTC ISO
+      const runAt = new Date(dt).toISOString();
 
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runAt: utcTime })  // ✅ use UTC
+        body: JSON.stringify({ runAt })
       });
 
-      if (res.ok) {
-        msg.textContent = '✅ Call scheduled!';
-      } else {
-        msg.textContent = `❌ Error ${res.status}: ${await res.text()}`;
-      }
+      const text = await res.text();
+      msg.textContent = res.ok ? text : `Error ${res.status}: ${text}`;
     };
   </script>
 </body>
