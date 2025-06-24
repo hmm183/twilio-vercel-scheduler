@@ -2,15 +2,23 @@ name: Process scheduled calls
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Runs every minute
-  workflow_dispatch:       # Optional: allows you to run manually
+    - cron: '*/1 * * * *'   # every minute
+  workflow_dispatch:        # manual trigger
 
 jobs:
-  process-calls:
+  run-scheduler:
     runs-on: ubuntu-latest
+    env:
+      MONGO_URI:        ${{ secrets.MONGO_URI }}
+      VERCEL_APP_URL:   ${{ secrets.VERCEL_APP_URL }}
+      SCHEDULE_SECRET:  ${{ secrets.SCHEDULE_SECRET }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN:  ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
+      TWILIO_TO_NUMBER:   ${{ secrets.TWILIO_TO_NUMBER }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Set up Node.js
@@ -18,12 +26,8 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install fetch (node-fetch)
-        run: npm install node-fetch@2
+      - name: Install dependencies
+        run: npm install mongodb node-fetch@2
 
-      - name: Run job processor
-        run: |
-          node .github/workflows/process-jobs.js
-        env:
-          VERCEL_APP_URL: twilio-vercel-scheduler.vercel.app
-          SCHEDULE_SECRET: ${{ secrets.SCHEDULE_SECRET }}
+      - name: Process MongoDB jobs
+        run: node .github/workflows/process-jobs.js
